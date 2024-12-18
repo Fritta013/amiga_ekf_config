@@ -1,0 +1,138 @@
+#note: dual extended kalman filter 
+#ekf_node to fuse global data like gps or laser scan 
+#future improvement use ukf_node instead 
+
+
+
+ekf_filter_node:
+    ros__parameters:
+        frequency: 50.0 #check right frequency 
+        two_d_mode: false #assumption non planar/uneven environment (agriculture env)
+        publish_tf: true # to publish world > odom transformation
+        publish_acceleration: false #change to publish acceleration state 
+        
+
+
+ 
+        sensor_timeout: 1/50 #sensor timed out default 1/frequency 
+        transform_time_offset: 0.0 #no time offset applied, change if needed 
+        transform_timeout: 0.0 #change if needed 
+        #change id needed for integration with ros pkgs 
+
+        debug: false #change if needed for debugging
+        # Defaults to "robot_localization_debug.txt" if unspecified
+        #debug_out_file: /path/to/debug/file.txt 
+
+        
+        print_diagnostics: false #change to true if needed 
+        map_frame: map             
+        odom_frame: odom            
+        base_link_frame: base_footprint 
+        world_frame: map #change to map since you re using gps global data 
+        #if gps is true, use with another instance of robot localization
+        #to get map > odom transform 
+
+        
+        
+
+        #x     , y     , z,
+        #roll  , pitch , yaw,
+        #vx    , vy    , vz,
+        #vroll , vpitch, vyaw,
+        #ax    , ay    , az
+        odom0: /odometry/gps #output from navsat_transform 
+        #nav_msgs/Odometry message can be directly fused into ekf/ukf_node 
+        odom0_config: [true,  true,  false,
+                       false, false, false,
+                       false, false, false,
+                       false, false, false,
+                       false, false, false]
+        odom0_queue_size: 5 #chnage if needed 
+        odom0_differential: false
+        odom0_relative: false #because abosolute pose estimation output from navsat_transofrm node 
+
+        # If you have high-frequency data or are running with a low frequency parameter value, then you may want to increase
+        # the size of the subscription queue so that more measurements are fused.
+        odom0_queue_size: 5
+        odom0_relative: true #start from first measurement = 0
+
+
+        
+        # [ADVANCED] Large messages in ROS can exhibit strange behavior when they arrive at a high frequency. This is a result
+        # of Nagle's algorithm. This option tells the ROS subscriber to use the tcpNoDelay option, which disables Nagle's
+        # algorithm.
+        #odom0_nodelay: false #no odom just imu 
+        odom0_nodelay: true #disable Nagle's algorithm
+
+
+        imu0: imu/data
+        imu0_config: [false, false, false,
+                      false, false, true,
+                      false, false, false,
+                      false, false, false,
+                      false,  false,  false]
+        imu0_queue_size: 5 #change if needed 
+        imu0_nodelay: true #disable Nagle's algorithm
+
+
+        imu0_differential: true #diff data 
+
+
+        imu0_relative: true #start from first measurement = 0
+
+        #reject outliers and spikes values 
+        imu0_pose_rejection_threshold: 5     # Threshold for pose data rejection
+        imu0_twist_rejection_threshold: 1    # Threshold for angular velocity rejection
+        imu0_linear_acceleration_rejection_threshold: 1  #
+
+
+        #remove acceleration due to gravity, data conforms to REP-103
+        imu0_remove_gravitational_acceleration: true
+
+        #imporve the robot control input 
+        use_control: false
+        # The last issued control command will be used in prediction for this period. Defaults to 0.2.
+        #control_timeout: 0.2
+
+
+
+
+
+        #noise covariance matrix, default values 
+        #for faster convergence increase diagonal values which will cause the filter to trust the incoming measurement more during correction
+        process_noise_covariance: [0.05, 0,    0,    0,    0,    0,    0,     0,     0,    0,    0,    0,    0,    0,    0,
+                           0,    0.05, 0,    0,    0,    0,    0,     0,     0,    0,    0,    0,    0,    0,    0,
+                           0,    0,    0.06, 0,    0,    0,    0,     0,     0,    0,    0,    0,    0,    0,    0,
+                           0,    0,    0,    0.03, 0,    0,    0,     0,     0,    0,    0,    0,    0,    0,    0,
+                           0,    0,    0,    0,    0.03, 0,    0,     0,     0,    0,    0,    0,    0,    0,    0,
+                           0,    0,    0,    0,    0,    0.06, 0,     0,     0,    0,    0,    0,    0,    0,    0,
+                           0,    0,    0,    0,    0,    0,    0.025, 0,     0,    0,    0,    0,    0,    0,    0,
+                           0,    0,    0,    0,    0,    0,    0,     0.025, 0,    0,    0,    0,    0,    0,    0,
+                           0,    0,    0,    0,    0,    0,    0,     0,     0.04, 0,    0,    0,    0,    0,    0,
+                           0,    0,    0,    0,    0,    0,    0,     0,     0,    0.01, 0,    0,    0,    0,    0,
+                           0,    0,    0,    0,    0,    0,    0,     0,     0,    0,    0.01, 0,    0,    0,    0,
+                           0,    0,    0,    0,    0,    0,    0,     0,     0,    0,    0,    0.02, 0,    0,    0,
+                           0,    0,    0,    0,    0,    0,    0,     0,     0,    0,    0,    0,    0.01, 0,    0,
+                           0,    0,    0,    0,    0,    0,    0,     0,     0,    0,    0,    0,    0,    0.01, 0,
+                           0,    0,    0,    0,    0,    0,    0,     0,     0,    0,    0,    0,    0,    0,    0.015]
+
+        #initial value for the state estimate error covariance matrix, default values
+        initial_estimate_covariance: [1e-9, 0,    0,    0,    0,    0,    0,    0,    0,    0,     0,     0,     0,    0,    0,
+                              0,    1e-9, 0,    0,    0,    0,    0,    0,    0,    0,     0,     0,     0,    0,    0,
+                              0,    0,    1e-9, 0,    0,    0,    0,    0,    0,    0,     0,     0,     0,    0,    0,
+                              0,    0,    0,    1e-9, 0,    0,    0,    0,    0,    0,     0,     0,     0,    0,    0,
+                              0,    0,    0,    0,    1e-9, 0,    0,    0,    0,    0,     0,     0,     0,    0,    0,
+                              0,    0,    0,    0,    0,    1e-9, 0,    0,    0,    0,     0,     0,     0,    0,    0,
+                              0,    0,    0,    0,    0,    0,    1e-9, 0,    0,    0,     0,     0,     0,    0,    0,
+                              0,    0,    0,    0,    0,    0,    0,    1e-9, 0,    0,     0,     0,     0,    0,    0,
+                              0,    0,    0,    0,    0,    0,    0,    0,    1e-9, 0,     0,     0,     0,    0,    0,
+                              0,    0,    0,    0,    0,    0,    0,    0,    0,    1e-9,  0,     0,     0,    0,    0,
+                              0,    0,    0,    0,    0,    0,    0,    0,    0,    0,     1e-9,  0,     0,    0,    0,
+                              0,    0,    0,    0,    0,    0,    0,    0,    0,    0,     0,     1e-9,  0,    0,    0,
+                              0,    0,    0,    0,    0,    0,    0,    0,    0,    0,     0,     0,     1e-9, 0,    0,
+                              0,    0,    0,    0,    0,    0,    0,    0,    0,    0,     0,     0,     0,    1e-9, 0,
+                              0,    0,    0,    0,    0,    0,    0,    0,    0,    0,     0,     0,     0,    0,    1e-9]
+
+
+
+        
