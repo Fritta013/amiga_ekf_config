@@ -41,4 +41,4 @@ navsat_transform_node:
       # origin (datum) using this parameter. The fields in the parameter represent latitude and longitude in decimal degrees,
       # and heading in radians. As navsat_transform_node assumes an ENU standard, a 0 heading corresponds to east.
       #WGS84 format: latitude, longitude, altitude
-      datum: [37.364491, -120.423234, 0.0] #latitude longitude retrived from maps 
+      datum: [37.364491, -120.423234, 0.0] #latitude longitude retrieved from maps 
